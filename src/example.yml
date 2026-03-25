@@ -1,0 +1,10 @@
+dir: ~/.oot/mi-scheduler
+
+kernel:
+  url: https://git.freebsd.org/src.git
+  ref: releng/14.1
+  #dir: /usr/src   # sobreescribe project_dir/kernel — útil si ya tenés el árbol
+
+patches:
+  url: https://github.com/grupo/petri-scheduler.git
+  ref: main
