@@ -1,9 +1,10 @@
 import logging
+import shutil
 from pathlib import Path
 
 from oot.config import Project
-from oot.git import Repo, is_empty_dir, is_git_repo, clone
 from oot.errors import RepoStateError
+from oot.git import Repo, clone, is_empty_dir, is_git_repo
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,10 @@ def fetch(cfg: Project, force: bool):
     repo = Repo(cwd)
 
     if force:
+        if cwd.exists() and not is_empty_dir(cwd):
+            logger.warning(f"Removing existing directory: {cwd}")
+            shutil.rmtree(cwd)
+
         clone(
             url=cfg.kernel.url,
             path=cwd,
