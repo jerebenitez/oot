@@ -17,7 +17,7 @@ def get_origin(repo: Repo) -> str | None:
     return result.stdout.strip()
 
 
-def is_empty_dir(path: str) -> bool:
+def is_empty_dir(path: Path) -> bool:
     p = Path(path)
 
     if not p.exists():

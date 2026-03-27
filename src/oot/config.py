@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pydantic import BaseModel
 
 
@@ -18,3 +19,9 @@ class Project(BaseModel):
     dir: str
     kernel: KernelConfig
     patches: PatchesConfig
+
+
+@dataclass
+class Context:
+    verbose: bool
+    config: Project

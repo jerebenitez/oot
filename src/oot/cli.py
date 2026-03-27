@@ -1,11 +1,14 @@
+import logging
 import os
-import click
-import yaml
 from pathlib import Path
 
-from oot.config import Project
-import oot.commands as commands
+import click
+import yaml
 
+import oot.commands as commands
+from oot.config import Project
+
+logger = logging.getLogger("oot")
 pass_project = click.make_pass_decorator(Project)
 
 
@@ -19,7 +22,17 @@ pass_project = click.make_pass_decorator(Project)
     help="Specify a custom config file",
     type=click.Path(),
 )
-def cli(ctx, config):
+@click.option("--verbose", "-v", count=True)
+def cli(ctx, config, verbose):
+    level = logging.WARNING
+
+    if verbose == 1:
+        level = logging.INFO
+    if verbose == 2:
+        level = logging.DEBUG
+
+    logging.basicConfig(level=level, format="%(message)s%")
+
     default_path = Path("./oot.yml")
     config_path = Path(config)
 
@@ -55,9 +68,19 @@ def cli(ctx, config):
 
 
 @cli.command()
+@click.option(
+    "--force",
+    "-f",
+    is_flag=True,
+    # TODO: improve this message
+    help="clone repos to specified directories, even if they're not empty",
+)
 @pass_project
-def fetch(project):
-    commands.fetch(project)
+def fetch(project, force):
+    try:
+        commands.fetch(project, force)
+    except Exception as e:
+        raise click.ClickException(str(e))
 
 
 @cli.command()
