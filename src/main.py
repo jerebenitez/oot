@@ -64,7 +64,10 @@ def fetch(project):
 @click.argument("target")
 @pass_project
 def path(project, target):
-    commands.path(project, target)
+    try:
+        commands.path(project, target)
+    except Exception as e:
+        raise click.ClickException(e)
 
 
 @oot.command(
