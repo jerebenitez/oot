@@ -61,9 +61,10 @@ def fetch(project):
 
 
 @oot.command()
+@click.argument("target")
 @pass_project
-def path(project):
-    commands.path(project)
+def path(project, target):
+    commands.path(project, target)
 
 
 @oot.command(
