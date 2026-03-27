@@ -1,8 +1,8 @@
-dir: ~/.oot/mi-scheduler
+dir: ~/.oot/
 
 kernel:
-  url: https://git.freebsd.org/src.git
-  ref: releng/14.1
+  url: https://github.com/freebsd/freebsd-src
+  ref: releng/15.0
   #dir: /usr/src   # sobreescribe project_dir/kernel — útil si ya tenés el árbol
 
 patches:

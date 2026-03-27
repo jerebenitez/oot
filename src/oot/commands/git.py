@@ -1,6 +1,7 @@
 import subprocess
+from typing import List
 
-from config import Project
+from oot.config import Project
 
 
 def git(cfg: Project, args: List[str]):

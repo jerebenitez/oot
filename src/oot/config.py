@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class KernelConfig(BaseModel):
     url: str
     ref: str
+    depth: int = 1
     dir: str | None = None
 
 

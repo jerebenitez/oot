@@ -1,4 +1,4 @@
-from config import Project
+from oot.config import Project
 
 
 def path(cfg: Project, target: str):

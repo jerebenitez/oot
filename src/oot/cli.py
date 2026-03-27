@@ -3,8 +3,8 @@ import click
 import yaml
 from pathlib import Path
 
-from config import Project
-import commands
+from oot.config import Project
+import oot.commands as commands
 
 pass_project = click.make_pass_decorator(Project)
 
@@ -19,7 +19,7 @@ pass_project = click.make_pass_decorator(Project)
     help="Specify a custom config file",
     type=click.Path(),
 )
-def oot(ctx, config):
+def cli(ctx, config):
     default_path = Path("./oot.yml")
     config_path = Path(config)
 
@@ -54,23 +54,23 @@ def oot(ctx, config):
     ctx.obj = cfg
 
 
-@oot.command()
+@cli.command()
 @pass_project
 def fetch(project):
     commands.fetch(project)
 
 
-@oot.command()
+@cli.command()
 @click.argument("target")
 @pass_project
 def path(project, target):
     try:
         commands.path(project, target)
     except Exception as e:
-        raise click.ClickException(e)
+        raise click.ClickException(str(e))
 
 
-@oot.command(
+@cli.command(
     context_settings=dict(
         ignore_unknown_options=True,
         allow_extra_args=True,
@@ -80,7 +80,3 @@ def path(project, target):
 @pass_project
 def git(project, ctx):
     commands.git(project, ctx.args)
-
-
-if __name__ == "__main__":
-    oot()
