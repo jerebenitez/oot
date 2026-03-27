@@ -4,13 +4,13 @@ from pydantic import BaseModel
 class KernelConfig(BaseModel):
     url: str
     ref: str
-    dir: str = "kernel"
+    dir: str | None = None
 
 
 class PatchesConfig(BaseModel):
     url: str
     ref: str
-    dir: str = "patches"
+    dir: str | None = None
 
 
 class Project(BaseModel):
