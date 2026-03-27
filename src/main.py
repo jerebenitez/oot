@@ -1,6 +1,7 @@
 import os
 import click
 import yaml
+from pathlib import Path
 
 from config import Project
 import commands
@@ -19,8 +20,24 @@ pass_project = click.make_pass_decorator(Project)
     type=click.Path(),
 )
 def oot(ctx, config):
-    with open(config) as cfg:
-        data = yaml.safe_load(cfg)
+    default_path = Path("./oot.yml")
+    config_path = Path(config)
+
+    if not config_path.exists():
+        if config_path == default_path:
+            raise click.ClickException(
+                "No config file found.\n"
+                "Expected default at ./oot.yml\n\n"
+                "Use --config to specify a custom file."
+            )
+        else:
+            raise click.ClickException(f"Config file not found: {config_path}")
+
+    try:
+        with open(config) as cfg:
+            data = yaml.safe_load(cfg)
+    except Exception as e:
+        raise click.ClickException(f"Failed to read config: {e}")
 
     cfg = Project.model_validate(data)
     cfg.patches.dir = (
