@@ -3,6 +3,7 @@ from pathlib import Path
 
 from oot.config import Project
 from oot.git import Repo, is_empty_dir, is_git_repo, clone
+from oot.errors import RepoStateError
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +33,12 @@ def fetch(cfg: Project, force: bool):
                 "Directory is not empty, and url is not set. Nothing to do here."
             )
         else:
-            raise Exception(
+            raise RepoStateError(
                 f"{cwd} exists, is not empty, and is not a git repository.\n\n"
+                f"Configured URL: {cfg.kernel.url}\n\n"
                 "Refusing to clone into a non-empty directory.\n\n"
                 "Options:\n"
                 "  • Remove the directory and run 'oot fetch' again\n"
-                "  • Remove 'kernel.url' from the config to use the existing directory"
-                "  • Use the --force flag if you want to overwrite the directory's cotnents (WARNING!)"
+                "  • Remove 'kernel.url' from the config to use the existing directory\n"
+                "  • Use '--force' to overwrite the directory (WARNING: deletes contents)"
             )

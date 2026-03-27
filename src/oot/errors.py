@@ -1,0 +1,2 @@
+class RepoStateError(Exception):
+    pass
