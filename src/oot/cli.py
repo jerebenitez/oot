@@ -31,7 +31,7 @@ def cli(ctx, config, verbose):
     if verbose == 2:
         level = logging.DEBUG
 
-    logging.basicConfig(level=level, format="%(message)s%")
+    logging.basicConfig(level=level, format="%(message)s")
 
     default_path = Path("./oot.yml")
     config_path = Path(config)
@@ -53,15 +53,26 @@ def cli(ctx, config, verbose):
         raise click.ClickException(f"Failed to read config: {e}")
 
     cfg = Project.model_validate(data)
+
+    cfg.dir = Path(cfg.dir).expanduser().resolve()
+
     cfg.patches.dir = (
-        cfg.patches.dir
-        if cfg.patches.dir is not None
-        else os.path.join(cfg.dir, "patches")
+        Path(
+            cfg.patches.dir
+            if cfg.patches.dir is not None
+            else os.path.join(cfg.dir, "patches")
+        )
+        .expanduser()
+        .resolve()
     )
     cfg.kernel.dir = (
-        cfg.kernel.dir
-        if cfg.kernel.dir is not None
-        else os.path.join(cfg.dir, "kernel")
+        Path(
+            cfg.kernel.dir
+            if cfg.kernel.dir is not None
+            else os.path.join(cfg.dir, "kernel")
+        )
+        .expanduser()
+        .resolve()
     )
 
     ctx.obj = cfg
@@ -72,7 +83,6 @@ def cli(ctx, config, verbose):
     "--force",
     "-f",
     is_flag=True,
-    # TODO: improve this message
     help="clone repos to specified directories, even if they're not empty",
 )
 @pass_project

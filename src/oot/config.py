@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from pydantic import BaseModel
 
 
@@ -6,17 +7,17 @@ class KernelConfig(BaseModel):
     url: str
     ref: str
     depth: int = 1
-    dir: str | None = None
+    dir: str | Path | None = None
 
 
 class PatchesConfig(BaseModel):
     url: str
     ref: str
-    dir: str | None = None
+    dir: str | Path | None = None
 
 
 class Project(BaseModel):
-    dir: str
+    dir: str | Path
     kernel: KernelConfig
     patches: PatchesConfig
 
