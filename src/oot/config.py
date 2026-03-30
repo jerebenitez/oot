@@ -3,23 +3,17 @@ from pathlib import Path
 from pydantic import BaseModel
 
 
-class KernelConfig(BaseModel):
+class RepoConfig(BaseModel):
     url: str
     ref: str
     depth: int = 1
     dir: str | Path | None = None
 
 
-class PatchesConfig(BaseModel):
-    url: str
-    ref: str
-    dir: str | Path | None = None
-
-
 class Project(BaseModel):
     dir: str | Path
-    kernel: KernelConfig
-    patches: PatchesConfig
+    kernel: RepoConfig
+    patches: RepoConfig
 
 
 @dataclass

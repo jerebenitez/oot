@@ -85,10 +85,17 @@ def cli(ctx, config, verbose):
     is_flag=True,
     help="clone repos to specified directories, even if they're not empty",
 )
+@click.option(
+    "--target",
+    "-t",
+    help="fetching target",
+    default="all",
+    type=click.Choice(["all", "kernel", "patches"]),
+)
 @pass_project
-def fetch(project, force):
+def fetch(project, force, target):
     try:
-        commands.fetch(project, force)
+        commands.fetch(cfg=project, target=target, force=force)
     except Exception as e:
         raise click.ClickException(str(e))
 

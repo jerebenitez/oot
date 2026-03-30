@@ -6,5 +6,5 @@ kernel:
   #dir: /usr/src   # sobreescribe project_dir/kernel — útil si ya tenés el árbol
 
 patches:
-  url: https://github.com/grupo/petri-scheduler.git
+  url: https://github.com/jerebenitez/oot
   ref: main
