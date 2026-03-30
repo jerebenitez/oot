@@ -95,7 +95,9 @@ def cli(ctx, config, verbose):
 @pass_project
 def fetch(project, force, target):
     try:
-        commands.fetch(cfg=project, target=target, force=force)
+        targets = ["kernel", "patches"] if target == "all" else [target]
+        for t in targets:
+            commands.fetch(cfg=project, target=t, force=force)  # type: ignore
     except Exception as e:
         raise click.ClickException(str(e))
 
