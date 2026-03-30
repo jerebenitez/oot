@@ -54,31 +54,24 @@ class Repo:
                 f"      To use this repo, update 'url' in your config file."
             )
 
-    def _update_repo(self, ref: str, depth: int = 1):
-        r = self.git("fetch", "--all")
+    def _update_repo(self, ref: str, depth: int | None = None):
+        cmd = ["fetch", "origin", ref]
+        if depth is not None:
+            cmd += ["--depth", str(depth)]
 
+        r = self.git(*cmd)
         if r.returncode != 0:
             raise FetchError(f"git fetch failed:\n{r.stderr.strip()}")
 
-        r = self.git("checkout", ref)
-
+        r = self.git("reset", "--hard", f"origin/{ref}")
         if r.returncode != 0:
-            raise FetchError(f"git checkout {ref} failed:\n{r.stderr.strip()}")
+            raise FetchError(
+                f"git reset --hard origin/{ref} failed:\n{r.stderr.strip()}"
+            )
 
-        r = self.git("symbolic-ref", "--quiet", "HEAD")
-
-        if r.returncode == 0:
-            cmd = ["pull", "--ff-only"]
-
-            if depth:
-                cmd += ["--depth", str(depth)]
-
-            r = self.git(*cmd)
-            if r.returncode != 0:
-                logger.warning(
-                    f"git pull --ff-only failed (you may have local changes):\n"
-                    f"{r.stderr.strip()}"
-                )
+        r = self.git("clean", "-fd")
+        if r.returncode != 0:
+            raise FetchError(f"git clean failed:\n{r.stderr.strip()}")
 
         logger.info(f"Updated to {ref}")
 
