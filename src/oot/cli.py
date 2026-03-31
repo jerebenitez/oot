@@ -122,3 +122,12 @@ def path(project, target):
 @pass_project
 def git(project, ctx):
     commands.git(project, ctx.args)
+
+
+@cli.command()
+@pass_project
+def install(project):
+    try:
+        commands.install(project)
+    except Exception as e:
+        raise click.ClickException(str(e))

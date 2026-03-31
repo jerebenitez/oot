@@ -1,6 +1,7 @@
 import logging
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 from oot.errors import ConfigError, FetchError
@@ -14,13 +15,41 @@ class Repo:
         self.path = path
         self.url = url
 
-    def git(self, *args, capture_output: bool = True, check: bool = False):
-        return subprocess.run(
-            ["git", "-C", self.path, *args],
-            capture_output=capture_output,
-            text=True,
-            check=check,
-        )
+    def git(self, *args, **kwargs):
+        defaults = {"capture_output": True, "text": True}
+        return subprocess.run(["git", "-C", self.path, *args], **{**defaults, **kwargs})
+
+    def get_blob(self, blob: str):
+        base = self.git("show", blob)
+        if base.returncode != 0:
+            raise RuntimeError(f"blob {blob} not found")
+
+        return base
+
+    def get_diff(self, base_blob: str, target_path: str) -> str:
+        base = self.get_blob(base_blob)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            base_file = Path(tmp) / "base"
+            base_file.write_text(base.stdout)
+
+            r = self.git("diff", "--no-index", str(base_file), str(target_path))
+
+            if r.returncode not in (0, 1):
+                raise RuntimeError(f"git diff failed:\n{r.stderr}")
+
+            return r.stdout
+
+    def apply(self, diff: str, dry_run: bool = True):
+        apply_cmd = ["apply", "--3way"]
+
+        if dry_run:
+            apply_cmd.append("--check")
+
+        r = self.git(*apply_cmd, input=diff)
+
+        if r.returncode != 0:
+            raise RuntimeError(f"apply failed:\n{r.stderr}")
 
     def clone(self, ref: str, depth: int = 1, force: bool = False):
         logger.info(f"Cloning repo from {self.url} to {self.path}")

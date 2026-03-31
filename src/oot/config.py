@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class RepoConfig(BaseModel):
-    url: str
+    url: str | None = None
     ref: str
     depth: int = 1
     dir: str | Path | None = None
