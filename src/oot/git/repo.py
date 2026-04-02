@@ -26,7 +26,7 @@ class Repo:
 
         return base
 
-    def get_diff(self, base_blob: str, target_path: str) -> str:
+    def get_diff(self, base_blob: str, target_path: str | Path) -> str:
         base = self.get_blob(base_blob)
 
         with tempfile.TemporaryDirectory() as tmp:
