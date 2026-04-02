@@ -16,6 +16,9 @@ def install(
     dry_run: bool = False,
     fail_fast: bool = True,
 ):
+    assert isinstance(cfg.kernel.dir, Path)
+    assert isinstance(cfg.patches.dir, Path)
+
     metadata = get_metadata(cfg, metadata_path)
     repo = Repo(cfg.kernel.dir, cfg.kernel.url)
 
@@ -43,7 +46,7 @@ def install(
 
                     repo.apply(diff, dry_run=dry_run)
 
-            if file.status == "new":
+            elif file.status == "new":
                 if dst_path.exists():
                     if filecmp.cmp(src_path, dst_path, shallow=False):
                         continue
