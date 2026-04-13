@@ -1,17 +1,44 @@
 import filecmp
 import logging
 import shutil
+from enum import Enum
 from pathlib import Path
+from typing import Literal
 
 from oot.config import Project
 from oot.git.repo import Repo
-from oot.metadata import Metadata
+from oot.metadata import Metadata, FileMetadata
 
 logger = logging.getLogger(__name__)
+
+OnConflict = Literal["force", "skip", "abort"]
+
+
+class Action(Enum):
+    SKIP = "skip"
+    CONTINUE = "continue"
+    ABORT = "abort"
+
+
+resolvers = {
+    "abort": lambda _: Action.ABORT,
+    "skip": lambda _: Action.SKIP,
+    "force": lambda _: Action.CONTINUE,
+}
+
+
+class Context:
+    def __init__(self, repo, patches_dir, kernel_dir, resolver, dry_run):
+        self.repo = repo
+        self.patches_dir = patches_dir
+        self.kernel_dir = kernel_dir
+        self.resolve = resolver
+        self.dry_run = dry_run
 
 
 def install(
     cfg: Project,
+    resolver,
     metadata_path: str | None = None,
     dry_run: bool = False,
     fail_fast: bool = True,
@@ -22,60 +49,107 @@ def install(
     metadata = get_metadata(cfg, metadata_path)
     repo = Repo(cfg.kernel.dir, cfg.kernel.url)
 
-    for file in metadata.files:
-        src_path = cfg.patches.dir / file.path
-        dst_path = cfg.kernel.dir / file.path
+    ctx = Context(repo, cfg.patches.dir, cfg.kernel.dir, resolver, dry_run)
 
-        if not src_path.is_file():
-            raise FileNotFoundError(f"patch file not found: {file.path}")
+    handlers = {
+        "modified": _install_modified,
+        "new": _install_new,
+    }
+
+    for file in metadata.files:
+        base_blob = file.base_blob if file.base_blob else metadata.base_blob
+
+        handler = handlers.get(file.status)
+        if handler is None:
+            raise ValueError(f"unknown status: {file.status}")
 
         try:
-            if file.status == "modified":
-                if not dst_path.is_file():
-                    raise FileNotFoundError(
-                        f"file {file.path} not found in kernel repo"
-                    )
-                else:
-                    diff = repo.get_diff(
-                        file.base_blob if file.base_blob else metadata.base_blob,
-                        src_path,
-                    )
+            result = handler(ctx, file, base_blob)
 
-                    if not diff.strip():
-                        continue
+            if result == Action.SKIP:
+                logger.info("Skipping %s", file.path)
+                continue
+            elif result == Action.ABORT:
+                logger.info("Aborting install")
+                return
 
-                    repo.apply(diff, dry_run=dry_run)
-
-            elif file.status == "new":
-                if dst_path.exists():
-                    if filecmp.cmp(src_path, dst_path, shallow=False):
-                        continue
-
-                    raise FileExistsError(f"file already exists in kernel: {file.path}")
-
-                if not dry_run:
-                    dst_path.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy(src_path, dst_path)
-
-            else:
-                # Should never reach this
-                raise ValueError(f"unknown status: {file.status}")
         except Exception as e:
             if fail_fast:
                 raise
-            else:
-                logger.error(f"failed processing: {file.path}: {e}")
-                continue
+            logger.error("Failed processing %s: %s", file.path, e)
 
 
-def get_metadata(cfg: Project, metadata_path: str | None):
-    metadata_dir = (
+def _install_modified(
+    ctx: Context,
+    file: FileMetadata,
+    base_blob: str,
+):
+    src = ctx.patches_dir / file.path
+    dst = ctx.kernel_dir / file.path
+
+    if not src.is_file():
+        raise FileNotFoundError(f"patch file not found: {file.path}")
+
+    if not dst.is_file():
+        raise FileNotFoundError(f"file {file.path} not found in kernel repo")
+
+    diff = ctx.repo.get_diff(base_blob, src, file.path)
+
+    if not diff.strip():
+        logger.debug("No diff for %s, skipping", file.path)
+        return
+
+    # Check conflicts first
+    r = ctx.repo.apply(diff, dry_run=ctx.dry_run)
+    if r.returncode != 0:
+        action = ctx.resolve(file.path)
+
+        if action == Action.SKIP or action == Action.ABORT:
+            return action
+
+        if not ctx.dry_run:
+            r = ctx.repo.apply(diff)
+            if r.returncode != 0:
+                raise RuntimeError(f"force apply failed for {file.path}:\n{r.stderr}")
+
+
+def _install_new(
+    ctx: Context,
+    file: FileMetadata,
+    _: str,
+):
+    src = ctx.patches_dir / file.path
+    dst = ctx.kernel_dir / file.path
+
+    if not src.is_file():
+        raise FileNotFoundError(f"patch file not found: {file.path}")
+
+    if dst.exists():
+        if filecmp.cmp(src, dst, shallow=False):
+            logger.debug("File identical, skipping: %s", file.path)
+            return
+
+        action = ctx.resolve(file.path)
+
+        if action == Action.SKIP or action == Action.ABORT:
+            return action
+
+        # force → overwrite
+    if not ctx.dry_run:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(src, dst)
+
+    logger.debug("Installed %s", file.path)
+
+
+def get_metadata(cfg: Project, metadata_path: str | Path | None):
+    metadata_path = (
         Path(metadata_path)
         if metadata_path is not None
         else cfg.patches.dir / "metadata.json"
     )
 
-    if not metadata_dir.is_file():
-        raise FileNotFoundError(f"metadata file not found: {metadata_dir}")
+    if not metadata_path.is_file():
+        raise FileNotFoundError(f"metadata file not found: {metadata_path}")
 
-    return Metadata.model_validate_json(metadata_dir.read_text())
+    return Metadata.model_validate_json(metadata_path.read_text())

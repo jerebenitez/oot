@@ -10,6 +10,25 @@ from oot.git.inspect import is_empty_dir
 logger = logging.getLogger(__name__)
 
 
+def normalize_diff_path(diff: str, path: str | Path) -> str:
+    rel = str(path)
+
+    lines = diff.splitlines()
+    out = []
+
+    for line in lines:
+        if line.startswith("diff --git"):
+            out.append(f"diff --git a{rel} b{rel}")
+        elif line.startswith("--- "):
+            out.append(f"--- a{rel}")
+        elif line.startswith("+++ "):
+            out.append(f"+++ b{rel}")
+        else:
+            out.append(line)
+
+    return "\n".join(out) + "\n"
+
+
 class Repo:
     def __init__(self, path: Path, url: str | None):
         self.path = path
@@ -26,30 +45,29 @@ class Repo:
 
         return base
 
-    def get_diff(self, base_blob: str, target_path: str | Path) -> str:
+    def get_diff(
+        self, base_blob: str, target_path: str | Path, rel_path: str | Path
+    ) -> str:
         base = self.get_blob(base_blob)
 
         with tempfile.TemporaryDirectory() as tmp:
             base_file = Path(tmp) / "base"
             base_file.write_text(base.stdout)
 
-            r = self.git("diff", "--no-index", str(base_file), str(target_path))
+            r = self.git("diff", str(base_file), str(target_path))
 
             if r.returncode not in (0, 1):
                 raise RuntimeError(f"git diff failed:\n{r.stderr}")
 
-            return r.stdout
+            diff = r.stdout
 
-    def apply(self, diff: str, dry_run: bool = True):
-        apply_cmd = ["apply", "--3way"]
+            return normalize_diff_path(diff, rel_path)
 
+    def apply(self, diff: str, dry_run: bool = False):
         if dry_run:
-            apply_cmd.append("--check")
+            return self.git("apply", "--check", input=diff)
 
-        r = self.git(*apply_cmd, input=diff)
-
-        if r.returncode != 0:
-            raise RuntimeError(f"apply failed:\n{r.stderr}")
+        return self.git("apply", "--3way", input=diff)
 
     def clone(self, ref: str, depth: int = 1, force: bool = False):
         logger.info(f"Cloning repo from {self.url} to {self.path}")

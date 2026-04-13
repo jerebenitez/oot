@@ -245,9 +245,9 @@ def test_get_diff_success(tmp_path):
     ]
 
     with patch("subprocess.run", side_effect=results):
-        diff = repo.get_diff("abc123", "file.c")
+        diff = repo.get_diff("abc123", "file.c", "")
 
-    assert diff == "diff output"
+    assert diff.strip() == "diff output"
 
 
 def test_get_diff_no_changes(tmp_path):
@@ -259,9 +259,9 @@ def test_get_diff_no_changes(tmp_path):
     ]
 
     with patch("subprocess.run", side_effect=results):
-        diff = repo.get_diff("abc123", "file.c")
+        diff = repo.get_diff("abc123", "file.c", "")
 
-    assert diff == ""
+    assert diff.strip() == ""
 
 
 def test_get_diff_failure(tmp_path):
@@ -274,7 +274,7 @@ def test_get_diff_failure(tmp_path):
 
     with patch("subprocess.run", side_effect=results):
         with pytest.raises(RuntimeError, match="git diff failed"):
-            repo.get_diff("abc123", "file.c")
+            repo.get_diff("abc123", "file.c", "")
 
 
 # --- apply ---
@@ -288,7 +288,6 @@ def test_apply_dry_run_success(tmp_path):
 
     args = mock_run.call_args[0][0]
     assert "apply" in args
-    assert "--3way" in args
     assert "--check" in args
 
 
@@ -308,5 +307,5 @@ def test_apply_failure(tmp_path):
     repo = Repo(tmp_path, None)
 
     with patch("subprocess.run", return_value=make_result(1, stderr="conflict")):
-        with pytest.raises(RuntimeError, match="apply failed"):
-            repo.apply("diff", dry_run=False)
+        r = repo.apply("diff", dry_run=False)
+        assert r.returncode != 0

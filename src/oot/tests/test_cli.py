@@ -488,12 +488,11 @@ def test_install_modified_conflict_resolver_force_retries_apply(project, dirs):
 
 def test_install_modified_force_retry_failure_raises(project, dirs):
     """apply falla + force + reintento también falla → RuntimeError."""
-    filePath = Path("sys") / "kern" / "kern_sched.c"
-    src = dirs["patches"] / filePath
+    src = dirs["patches"] / "sys" / "kern" / "kern_sched.c"
     src.parent.mkdir(parents=True)
     src.write_text("// patch\n")
 
-    dst = dirs["kernel"] / filePath
+    dst = dirs["kernel"] / "sys" / "kern" / "kern_sched.c"
     dst.parent.mkdir(parents=True)
     dst.write_text("// original\n")
 
@@ -505,7 +504,7 @@ def test_install_modified_force_retry_failure_raises(project, dirs):
 
     repo = mock_repo(apply_rc=1)
     with patch("oot.commands.install.Repo", return_value=repo):
-        with pytest.raises(RuntimeError, match=r"force apply failed for .*"):
+        with pytest.raises(RuntimeError, match=r"force apply failed .*"):
             install(project, resolvers["force"])
 
 

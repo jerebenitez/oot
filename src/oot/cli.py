@@ -1,11 +1,13 @@
 import logging
 import os
 from pathlib import Path
+from typing import Literal
 
 import click
 import yaml
 
 import oot.commands as commands
+from oot.commands.install import resolvers
 from oot.config import Project
 
 logger = logging.getLogger("oot")
@@ -125,9 +127,41 @@ def git(project, ctx):
 
 
 @cli.command()
+@click.option("--dry-run", "-dr", is_flag=True)
+@click.option(
+    "--fail-fast",
+    "-ff",
+    is_flag=True,
+    help="if passed, fail and exit after the first error",
+)
+@click.option(
+    "--on-conflict",
+    help="default action to take when a conflict is detected",
+    type=click.Choice(["abort", "force", "skip"]),
+)
+@click.option("--metadata_path", "-m", help="custom path for metadata file")
 @pass_project
-def install(project):
+def install(project, dry_run, fail_fast, on_conflict, metadata_path):
     try:
-        commands.install(project)
+        resolver = (
+            resolvers[on_conflict] if on_conflict is not None else prompt_resolver
+        )
+
+        commands.install(
+            cfg=project,
+            dry_run=dry_run,
+            fail_fast=fail_fast,
+            metadata_path=metadata_path,
+            resolver=resolver,
+        )
     except Exception as e:
         raise click.ClickException(str(e))
+
+
+def prompt_resolver(path: str) -> Literal["abort", "skip", "force"]:
+    click.echo(f"\n  ! {path} has local changes on top of the applied patch.")
+    return click.prompt(
+        "    What do you want to do?",
+        type=click.Choice(["force", "skip", "abort"]),
+        default="abort",
+    )
