@@ -74,6 +74,9 @@ def install(
                 logger.info("Aborting install")
                 return
 
+            ctx.repo.git("add", "-A")
+            ctx.repo.git("commit", "-m", "chore: installed patches to kernel")
+
         except Exception as e:
             if fail_fast:
                 raise
