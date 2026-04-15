@@ -54,6 +54,7 @@ def install(
     handlers = {
         "modified": _install_modified,
         "new": _install_new,
+        "deleted": _install_deleted,
     }
 
     for file in metadata.files:
@@ -79,6 +80,25 @@ def install(
             logger.error("Failed processing %s: %s", file.path, e)
 
 
+def _install_deleted(
+    ctx: Context,
+    file: FileMetadata,
+    _: str,
+):
+    dst = ctx.kernel_dir / file.path
+
+    if not dst.exists():
+        # install should be somewhat idempotent, if the file doesn't exist, our job is done
+        pass
+    # directories are not handled in order to follow git's logic
+    elif dst.is_file() or dst.is_symlink():
+        if not dst.resolve().is_relative_to(ctx.kernel_dir.resolve()):
+            raise RuntimeError(f"Path escapes kernel dir: {dst}")
+        dst.unlink()
+    else:
+        raise RuntimeError(f"Unsupported file type for path: {dst}")
+
+
 def _install_modified(
     ctx: Context,
     file: FileMetadata,
@@ -88,10 +108,10 @@ def _install_modified(
     dst = ctx.kernel_dir / file.path
 
     if not src.is_file():
-        raise FileNotFoundError(f"patch file not found: {file.path}")
+        raise FileNotFoundError(f"File {file.path} not found in patches repo")
 
     if not dst.is_file():
-        raise FileNotFoundError(f"file {file.path} not found in kernel repo")
+        raise FileNotFoundError(f"File {file.path} not found in kernel repo")
 
     diff = ctx.repo.get_diff(base_blob, src, file.path)
 

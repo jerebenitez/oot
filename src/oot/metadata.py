@@ -7,7 +7,7 @@ class FileMetadata(BaseModel):
 
     path: str
     base_blob: str | None = None
-    status: Literal["new", "modified"]
+    status: Literal["new", "modified", "deleted"]
 
 
 class Metadata(BaseModel):
