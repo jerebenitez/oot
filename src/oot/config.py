@@ -7,7 +7,7 @@ class RepoConfig(BaseModel):
     url: str | None = None
     ref: str
     depth: int = 1
-    dir: str | Path | None = None
+    dir: Path | None = None
 
 
 class Project(BaseModel):

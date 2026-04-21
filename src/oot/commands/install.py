@@ -166,6 +166,8 @@ def _install_new(
 
 
 def get_metadata(cfg: Project, metadata_path: str | Path | None):
+    assert cfg.patches.dir is not None
+
     metadata_path = (
         Path(metadata_path)
         if metadata_path is not None

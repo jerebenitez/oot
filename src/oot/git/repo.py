@@ -45,6 +45,18 @@ class Repo:
 
         return base
 
+    def get_blob_hash(self, rel_path: str) -> str | None:
+        """Return HEAD blob hash for a file in the kernel repo, or None if absent."""
+        r = self.git("ls-tree", "HEAD", rel_path)
+        if r.returncode != 0 or not r.stdout.strip():
+            return None
+        parts = r.stdout.split()
+        return parts[2] if len(parts) >= 3 else None
+
+    def get_head_blob(self):
+        r = self.git("rev-parse", "HEAD", check=True)
+        return r.stdout.strip()
+
     def get_diff(
         self, base_blob: str, target_path: str | Path, rel_path: str | Path
     ) -> str:
